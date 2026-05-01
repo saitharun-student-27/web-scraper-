@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PRO WEB SCRAPER</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            width: 900px;
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        input {
+            width: 65%;
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin-left: 5px;
+            border: none;
+            border-radius: 6px;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .card {
+            flex: 1 1 30%;
+            background: #334155;
+            margin: 5px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+            background: #475569;
+        }
+
+        .links {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #020617;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .links div {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            text-align: center;
+            margin-top: 10px;
+            color: #facc15;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>🔍 PRO WEB SCRAPER</h2>
+
+    <input type="text" id="url" placeholder="Enter URL (https://...)">
+    <button onclick="scrape()">Analyze</button>
+    <button onclick="downloadCSV()">Export CSV</button>
+
+    <div class="loading" id="loading"></div>
+
+    <div class="stats">
+        <div class="card" id="total"></div>
+        <div class="card" id="internal"></div>
+        <div class="card" id="external"></div>
+        <div class="card" id="broken"></div>
+        <div class="card" id="domains"></div>
+    </div>
+
+    <canvas id="chart" height="100"></canvas>
+
+    <h3>Links</h3>
+    <div class="links" id="list"></div>
+
+    <h3>Broken Links</h3>
+    <div class="links" id="brokenList"></div>
+</div>
+
+<script>
+let chart;
+
+async function scrape() {
+    const url = document.getElementById("url").value;
+    const loading = document.getElementById("loading");
+
+    if (!url) {
+        alert("Enter a valid URL");
+        return;
+    }
+
+    loading.innerText = "Analyzing...";
+
+    try {
+        const response = await fetch("http://127.0.0.1:5000/scrape", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+        loading.innerText = "";
+
+        if (data.error) {
+            loading.innerText = "Error: " + data.error;
+            return;
+        }
+
+        // Update stats
+        document.getElementById("total").innerText = "Total: " + data.total;
+        document.getElementById("internal").innerText = "Internal: " + data.internal;
+        document.getElementById("external").innerText = "External: " + data.external;
+        document.getElementById("broken").innerText = "Broken: " + data.broken;
+        document.getElementById("domains").innerText = "Domains: " + data.domains;
+
+        // Update links
+        const list = document.getElementById("list");
+        const brokenList = document.getElementById("brokenList");
+
+        list.innerHTML = "";
+        brokenList.innerHTML = "";
+
+        data.links.forEach(link => {
+            const div = document.createElement("div");
+            div.innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
+            list.appendChild(div);
+        });
+
+        data.broken_list.forEach(link => {
+            const div = document.createElement("div");
+            div.innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
+            brokenList.appendChild(div);
+        });
+
+        // Chart
+        const ctx = document.getElementById('chart').getContext('2d');
+
+        if (chart) {
+            chart.destroy();
+        }
+
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Total', 'Internal', 'External', 'Broken'],
+                datasets: [{
+                    label: 'Link Analysis',
+                    data: [data.total, data.internal, data.external, data.broken]
+                }]
+            }
+        });
+
+    } catch (err) {
+        loading.innerText = "Server not reachable";
+    }
+}
+
+// CSV Export
+function downloadCSV() {
+    let csv = "Link\n";
+    const links = document.querySelectorAll("#list a");
+
+    links.forEach(link => {
+        csv += link.href + "\n";
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "links.csv";
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
