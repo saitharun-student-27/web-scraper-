@@ -1,12 +1,19 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
+import os
 
 app = Flask(__name__)
 CORS(app)
 
+# ✅ Home route (fixes 404 error)
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+# 🔍 Scraping route
 @app.route('/scrape', methods=['POST'])
 def scrape():
     data = request.json
@@ -68,5 +75,7 @@ def scrape():
     except Exception as e:
         return jsonify({"error": str(e)})
 
+# 🚀 Run server (works for local + deployment)
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
