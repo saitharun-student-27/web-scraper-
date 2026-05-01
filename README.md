@@ -31,4 +31,4 @@ http://127.0.0.1:5000
 in screen shot folder
 
 ## 📌 Author
-p.Sai Tharun Kishore
+P.Sai Tharun Kishore
